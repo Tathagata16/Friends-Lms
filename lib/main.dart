@@ -1,104 +1,154 @@
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(const CollegeNotesApp());
+  runApp(const CollegeApp());
 }
 
-class CollegeNotesApp extends StatelessWidget {
-  const CollegeNotesApp({super.key});
+class CollegeApp extends StatefulWidget {
+  const CollegeApp({super.key});
+
+  @override
+  State<CollegeApp> createState() => _CollegeAppState();
+}
+
+class _CollegeAppState extends State<CollegeApp> {
+  bool _isDarkMode = false;
+
+  void _toggleTheme(bool value) {
+    setState(() {
+      _isDarkMode = value;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'College Notes & Opportunities',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6750A4),
-          brightness: Brightness.light,
+      title: 'College Notes',
+      theme: _isDarkMode
+          ? ThemeData.dark().copyWith(
+        primaryColor: Colors.deepPurple,
+        colorScheme: ColorScheme.dark(
+          primary: Colors.deepPurple,
+          secondary: Colors.tealAccent,
         ),
-        useMaterial3: true,
-        fontFamily: 'Roboto',
+        cardTheme: CardThemeData(
+          color: Colors.grey[400],
+          elevation: 4,
+          margin: const EdgeInsets.all(8),
+        ),
+      )
+          : ThemeData.light().copyWith(
+        primaryColor: Colors.blue,
+        colorScheme: ColorScheme.light(
+          primary: Colors.blue,
+          secondary: Colors.green,
+        ),
+        cardTheme: CardThemeData(
+          color: Colors.white,
+          elevation: 4,
+          margin: const EdgeInsets.all(8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
       ),
-      home: const MainScreen(),
+      home: MainScreen(toggleTheme: _toggleTheme, isDarkMode: _isDarkMode),
       debugShowCheckedModeBanner: false,
     );
   }
 }
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final Function(bool) toggleTheme;
+  final bool isDarkMode;
+
+  const MainScreen({
+    super.key,
+    required this.toggleTheme,
+    required this.isDarkMode,
+  });
 
   @override
-  State createState() => _MainScreenState();
+  State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State {
-  int _selectedIndex = 0;
+class _MainScreenState extends State<MainScreen> {
+  int _currentIndex = 0;
+  final List<Map<String, dynamic>> _bookmarks = [];
+  final List<Map<String, dynamic>> _notes = [];
+  final List<Map<String, dynamic>> _opportunities = [];
 
-  final List _screens = [
-    const HomeScreen(),
-    const NotesScreen(),
-    const OpportunitiesScreen(),
-    const ProfileScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Sample data
+    _notes.addAll([
+      {'id': '1', 'title': 'Data Structures', 'subject': 'Computer Science', 'isBookmarked': false},
+      {'id': '2', 'title': 'Calculus', 'subject': 'Mathematics', 'isBookmarked': false},
+    ]);
+    _opportunities.addAll([
+      {'id': '101', 'title': 'Summer Internship', 'company': 'Tech Corp', 'isBookmarked': false},
+      {'id': '102', 'title': 'Research Assistant', 'company': 'University', 'isBookmarked': false},
+    ]);
+  }
+
+  void _toggleBookmark(Map<String, dynamic> item) {
+    setState(() {
+      item['isBookmarked'] = !(item['isBookmarked'] ?? false);
+      if (item['isBookmarked']) {
+        _bookmarks.add(item);
+      } else {
+        _bookmarks.removeWhere((element) => element['id'] == item['id']);
+      }
+    });
+  }
+
+  void _addNote(String title, String subject) {
+    setState(() {
+      _notes.add({
+        'id': DateTime.now().toString(),
+        'title': title,
+        'subject': subject,
+        'isBookmarked': false
+      });
+    });
+  }
+
+  void _addOpportunity(String title, String company) {
+    setState(() {
+      _opportunities.add({
+        'id': DateTime.now().toString(),
+        'title': title,
+        'company': company,
+        'isBookmarked': false
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.note_outlined),
-            selectedIcon: Icon(Icons.note),
-            label: 'Notes',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.work_outline),
-            selectedIcon: Icon(Icons.work),
-            label: 'Opportunities',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
-      ),
-      floatingActionButton: _selectedIndex == 1 || _selectedIndex == 2
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                _showAddDialog(context);
-              },
-              icon: const Icon(Icons.add),
-              label: Text(_selectedIndex == 1 ? 'Add Note' : 'Add Opportunity'),
-            )
-          : null,
-    );
-  }
+    final List<Widget> screens = [
+      HomeScreen(notes: _notes, opportunities: _opportunities, toggleBookmark: _toggleBookmark),
+      NotesScreen(notes: _notes, toggleBookmark: _toggleBookmark, addNote: _addNote),
+      OpportunitiesScreen(opportunities: _opportunities, toggleBookmark: _toggleBookmark, addOpportunity: _addOpportunity),
+      ProfileScreen(bookmarks: _bookmarks, toggleTheme: widget.toggleTheme, isDarkMode: widget.isDarkMode),
+    ];
 
-  void _showAddDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(_selectedIndex == 1 ? 'Add New Note' : 'Add New Opportunity'),
-        content: const Text('Feature will be implemented with backend integration.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
+    return Scaffold(
+      body: screens[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        backgroundColor: Theme.of(context).primaryColor,
+        selectedItemColor: Theme.of(context).colorScheme.secondary,
+        unselectedItemColor: Colors.white.withOpacity(0.7),
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.note), label: 'Notes'),
+          BottomNavigationBarItem(icon: Icon(Icons.work), label: 'Opportunities'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );
@@ -106,589 +156,388 @@ class _MainScreenState extends State {
 }
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final List<Map<String, dynamic>> notes;
+  final List<Map<String, dynamic>> opportunities;
+  final Function(Map<String, dynamic>) toggleBookmark;
+
+  const HomeScreen({
+    super.key,
+    required this.notes,
+    required this.opportunities,
+    required this.toggleBookmark,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('College Hub'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
+            onPressed: () {
+              showSearch(
+                context: context,
+                delegate: SimpleSearchDelegate(notes: notes, opportunities: opportunities),
+              );
+            },
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Welcome Card
-            Card(
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Welcome Back!',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Share knowledge, discover opportunities',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
+      body: ListView(
+        children: [
+          Card(
+            margin: const EdgeInsets.all(16),
+            color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+            child: const Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Welcome!', style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  )),
+                  SizedBox(height: 8),
+                  Text('Find notes and opportunities', style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.black,
+                  )),
+                ],
               ),
             ),
-            const SizedBox(height: 24),
-
-            // Quick Stats
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    context,
-                    'Notes Shared',
-                    '1,234',
-                    Icons.note,
-                    Colors.blue,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildStatCard(
-                    context,
-                    'Opportunities',
-                    '89',
-                    Icons.work,
-                    Colors.green,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Recent Notes Section
-            Text(
-              'Recent Notes',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 3,
-              itemBuilder: (context, index) {
-                return _buildNoteCard(context, index);
-              },
-            ),
-            const SizedBox(height: 24),
-
-            // Recent Opportunities Section
-            Text(
-              'Latest Opportunities',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 2,
-              itemBuilder: (context, index) {
-                return _buildOpportunityCard(context, index);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(BuildContext context, String title, String value,
-                       IconData icon, Color color) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, size: 32, color: color),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNoteCard(BuildContext context, int index) {
-    final notes = [
-      {'title': 'Data Structures - Chapter 5', 'subject': 'Computer Science', 'author': 'g Doe'},
-      {'title': 'Calculus Integration Notes', 'subject': 'Mathematics', 'author': 'Jane Smith'},
-      {'title': 'Physics Mechanics Summary', 'subject': 'Physics', 'author': 'Mike Johnson'},
-    ];
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          child: const Icon(Icons.note, color: Colors.white),
-        ),
-        title: Text(notes[index]['title']!),
-        subtitle: Text('${notes[index]['subject']} • ${notes[index]['author']}'),
-        trailing: IconButton(
-          icon: const Icon(Icons.bookmark_border),
-          onPressed: () {},
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOpportunityCard(BuildContext context, int index) {
-    final opportunities = [
-      {'title': 'Summer Internship at Tech Corp', 'type': 'Internship', 'deadline': '2 days left'},
-      {'title': 'Research Assistant Position', 'type': 'Job', 'deadline': '1 week left'},
-    ];
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Theme.of(context).colorScheme.secondary,
-          child: const Icon(Icons.work, color: Colors.white),
-        ),
-        title: Text(opportunities[index]['title']!),
-        subtitle: Text('${opportunities[index]['type']} • ${opportunities[index]['deadline']}'),
-        trailing: IconButton(
-          icon: const Icon(Icons.arrow_forward_ios),
-          onPressed: () {},
-        ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text('Recent Notes', style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).primaryColor,
+            )),
+          ),
+          ...notes.take(2).map((note) => NoteCard(
+            note: note,
+            toggleBookmark: toggleBookmark,
+          )),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text('Latest Opportunities', style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).primaryColor,
+            )),
+          ),
+          ...opportunities.take(2).map((opp) => OpportunityCard(
+            opportunity: opp,
+            toggleBookmark: toggleBookmark,
+          )),
+        ],
       ),
     );
   }
 }
 
-class NotesScreen extends StatefulWidget {
-  const NotesScreen({super.key});
+class SimpleSearchDelegate extends SearchDelegate {
+  final List<Map<String, dynamic>> notes;
+  final List<Map<String, dynamic>> opportunities;
+
+  SimpleSearchDelegate({required this.notes, required this.opportunities});
 
   @override
-  State createState() => _NotesScreenState();
+  List<Widget> buildActions(BuildContext context) => [
+    IconButton(
+      icon: const Icon(Icons.clear),
+      onPressed: () => query = '',
+    ),
+  ];
+
+  @override
+  Widget buildLeading(BuildContext context) => IconButton(
+    icon: const Icon(Icons.arrow_back),
+    onPressed: () => close(context, null),
+  );
+
+  @override
+  Widget buildResults(BuildContext context) {
+    final noteResults = notes.where((note) =>
+        note['title'].toLowerCase().contains(query.toLowerCase())).toList();
+    final oppResults = opportunities.where((opp) =>
+        opp['title'].toLowerCase().contains(query.toLowerCase())).toList();
+
+    return ListView(
+      children: [
+        if (noteResults.isNotEmpty) ...[
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('Notes', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          ...noteResults.map((note) => ListTile(
+            title: Text(note['title']),
+            subtitle: Text(note['subject']),
+          )),
+        ],
+        if (oppResults.isNotEmpty) ...[
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('Opportunities', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          ...oppResults.map((opp) => ListTile(
+            title: Text(opp['title']),
+            subtitle: Text(opp['company']),
+          )),
+        ],
+        if (noteResults.isEmpty && oppResults.isEmpty)
+          const Center(child: Text('No results found')),
+      ],
+    );
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    final allItems = [...notes, ...opportunities];
+    final suggestions = query.isEmpty
+        ? []
+        : allItems.where((item) =>
+        item['title'].toLowerCase().contains(query.toLowerCase())).toList();
+
+    return ListView.builder(
+      itemCount: suggestions.length,
+      itemBuilder: (context, index) => ListTile(
+        title: Text(suggestions[index]['title']),
+        subtitle: Text(suggestions[index]['subject'] ?? suggestions[index]['company']),
+        onTap: () {
+          query = suggestions[index]['title'];
+          showResults(context);
+        },
+      ),
+    );
+  }
 }
 
-class _NotesScreenState extends State {
-  String selectedCategory = 'All';
-  final List categories = ['All', 'Computer Science', 'Mathematics', 'Physics', 'Chemistry', 'Biology'];
+class NotesScreen extends StatelessWidget {
+  final List<Map<String, dynamic>> notes;
+  final Function(Map<String, dynamic>) toggleBookmark;
+  final Function(String, String) addNote;
+
+  const NotesScreen({
+    super.key,
+    required this.notes,
+    required this.toggleBookmark,
+    required this.addNote,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notes'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () {},
-          ),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: ListView(
+        children: [
+          ...notes.map((note) => NoteCard(
+            note: note,
+            toggleBookmark: toggleBookmark,
+          )),
         ],
       ),
-      body: Column(
-        children: [
-          // Category Filter
-          Container(
-            height: 60,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: EdgeInsets.only(
-                    left: index == 0 ? 16 : 8,
-                    right: index == categories.length - 1 ? 16 : 0,
-                  ),
-                  child: FilterChip(
-                    label: Text(categories[index]),
-                    selected: selectedCategory == categories[index],
-                    onSelected: (selected) {
-                      setState(() {
-                        selectedCategory = categories[index];
-                      });
-                    },
-                  ),
-                );
-              },
-            ),
-          ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Theme.of(context).colorScheme.secondary,
+        child: const Icon(Icons.add, color: Colors.white),
+        onPressed: () => _showAddNoteDialog(context),
+      ),
+    );
+  }
 
-          // Notes List
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: 10,
-              itemBuilder: (context, index) {
-                return _buildNoteCard(context, index);
-              },
+  void _showAddNoteDialog(BuildContext context) {
+    final titleController = TextEditingController();
+    final subjectController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New Note'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(labelText: 'Title'),
             ),
+            TextField(
+              controller: subjectController,
+              decoration: const InputDecoration(labelText: 'Subject'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              addNote(titleController.text, subjectController.text);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Note added')),
+              );
+            },
+            child: const Text('Add'),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildNoteCard(BuildContext context, int index) {
-    final notes = [
-      {
-        'title': 'Advanced Data Structures',
-        'subject': 'Computer Science',
-        'author': 'Sarah Wilson',
-        'rating': 4.8,
-        'downloads': 234,
-        'date': '2 days ago'
-      },
-      {
-        'title': 'Calculus II - Integration Techniques',
-        'subject': 'Mathematics',
-        'author': 'Robert Chen',
-        'rating': 4.6,
-        'downloads': 156,
-        'date': '5 days ago'
-      },
-      {
-        'title': 'Quantum Mechanics Basics',
-        'subject': 'Physics',
-        'author': 'Emily Davis',
-        'rating': 4.9,
-        'downloads': 89,
-        'date': '1 week ago'
-      },
-    ];
+class NoteCard extends StatelessWidget {
+  final Map<String, dynamic> note;
+  final Function(Map<String, dynamic>) toggleBookmark;
 
-    final note = notes[index % notes.length];
+  const NoteCard({
+    super.key,
+    required this.note,
+    required this.toggleBookmark,
+  });
 
+  @override
+  Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    note['title'] as String,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.more_vert),
-                  onPressed: () {},
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Chip(
-                  label: Text(
-                    note['subject'] as String,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'by ${note['author']}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(Icons.star, size: 16, color: Colors.amber),
-                const SizedBox(width: 4),
-                Text('${note['rating']}'),
-                const SizedBox(width: 16),
-                Icon(Icons.download, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 4),
-                Text('${note['downloads']}'),
-                const Spacer(),
-                Text(
-                  note['date'] as String,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.visibility),
-                    label: const Text('Preview'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.download),
-                    label: const Text('Download'),
-                  ),
-                ),
-              ],
-            ),
-          ],
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: ListTile(
+        title: Text(note['title'], style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).primaryColor,
+        )),
+        subtitle: Text(note['subject'], style: TextStyle(
+          color: Colors.grey[600],
+        )),
+        trailing: IconButton(
+          icon: Icon(
+            note['isBookmarked'] ? Icons.bookmark : Icons.bookmark_border,
+            color: note['isBookmarked'] ? Colors.amber : Colors.grey,
+          ),
+          onPressed: () => toggleBookmark(note),
         ),
       ),
     );
   }
 }
 
-class OpportunitiesScreen extends StatefulWidget {
-  const OpportunitiesScreen({super.key});
+class OpportunitiesScreen extends StatelessWidget {
+  final List<Map<String, dynamic>> opportunities;
+  final Function(Map<String, dynamic>) toggleBookmark;
+  final Function(String, String) addOpportunity;
 
-  @override
-  State createState() => _OpportunitiesScreenState();
-}
-
-class _OpportunitiesScreenState extends State {
-  String selectedType = 'All';
-  final List types = ['All', 'Internship', 'Job', 'Research', 'Event', 'Workshop'];
+  const OpportunitiesScreen({
+    super.key,
+    required this.opportunities,
+    required this.toggleBookmark,
+    required this.addOpportunity,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Opportunities'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () {},
-          ),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: ListView(
+        children: [
+          ...opportunities.map((opp) => OpportunityCard(
+            opportunity: opp,
+            toggleBookmark: toggleBookmark,
+          )),
         ],
       ),
-      body: Column(
-        children: [
-          // Type Filter
-          Container(
-            height: 60,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: types.length,
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: EdgeInsets.only(
-                    left: index == 0 ? 16 : 8,
-                    right: index == types.length - 1 ? 16 : 0,
-                  ),
-                  child: FilterChip(
-                    label: Text(types[index]),
-                    selected: selectedType == types[index],
-                    onSelected: (selected) {
-                      setState(() {
-                        selectedType = types[index];
-                      });
-                    },
-                  ),
-                );
-              },
-            ),
-          ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Theme.of(context).colorScheme.secondary,
+        child: const Icon(Icons.add, color: Colors.white),
+        onPressed: () => _showAddOpportunityDialog(context),
+      ),
+    );
+  }
 
-          // Opportunities List
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: 8,
-              itemBuilder: (context, index) {
-                return _buildOpportunityCard(context, index);
-              },
+  void _showAddOpportunityDialog(BuildContext context) {
+    final titleController = TextEditingController();
+    final companyController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New Opportunity'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(labelText: 'Title'),
             ),
+            TextField(
+              controller: companyController,
+              decoration: const InputDecoration(labelText: 'Company'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              addOpportunity(titleController.text, companyController.text);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Opportunity added')),
+              );
+            },
+            child: const Text('Add'),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildOpportunityCard(BuildContext context, int index) {
-    final opportunities = [
-      {
-        'title': 'Software Engineering Internship',
-        'company': 'Tech Innovators Inc.',
-        'type': 'Internship',
-        'location': 'San Francisco, CA',
-        'deadline': '3 days left',
-        'salary': '\$3,000/month',
-        'urgent': true,
-      },
-      {
-        'title': 'Data Science Research Assistant',
-        'company': 'University Research Lab',
-        'type': 'Research',
-        'location': 'Cambridge, MA',
-        'deadline': '2 weeks left',
-        'salary': '\$2,500/month',
-        'urgent': false,
-      },
-      {
-        'title': 'Machine Learning Workshop',
-        'company': 'AI Academy',
-        'type': 'Workshop',
-        'location': 'Online',
-        'deadline': '5 days left',
-        'salary': 'Free',
-        'urgent': false,
-      },
-    ];
+class OpportunityCard extends StatelessWidget {
+  final Map<String, dynamic> opportunity;
+  final Function(Map<String, dynamic>) toggleBookmark;
 
-    final opportunity = opportunities[index % opportunities.length];
+  const OpportunityCard({
+    super.key,
+    required this.opportunity,
+    required this.toggleBookmark,
+  });
 
+  @override
+  Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        opportunity['title'] as String,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        opportunity['company'] as String,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                ),
-                if (opportunity['urgent'] as bool)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      'URGENT',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Chip(
-                  label: Text(
-                    opportunity['type'] as String,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                const SizedBox(width: 8),
-                Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 4),
-                Text(
-                  opportunity['location'] as String,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(Icons.attach_money, size: 16, color: Colors.green),
-                const SizedBox(width: 4),
-                Text(
-                  opportunity['salary'] as String,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
-                  ),
-                ),
-                const Spacer(),
-                Icon(Icons.access_time, size: 16, color: Colors.orange),
-                const SizedBox(width: 4),
-                Text(
-                  opportunity['deadline'] as String,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.info),
-                    label: const Text('Details'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.send),
-                    label: const Text('Apply'),
-                  ),
-                ),
-              ],
-            ),
-          ],
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: ListTile(
+        title: Text(opportunity['title'], style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: Colors.green[700],
+        )),
+        subtitle: Text(opportunity['company'], style: TextStyle(
+          color: Colors.grey[600],
+        )),
+        trailing: IconButton(
+          icon: Icon(
+            opportunity['isBookmarked'] ? Icons.bookmark : Icons.bookmark_border,
+            color: opportunity['isBookmarked'] ? Colors.amber : Colors.grey,
+          ),
+          onPressed: () => toggleBookmark(opportunity),
         ),
       ),
     );
@@ -696,148 +545,67 @@ class _OpportunitiesScreenState extends State {
 }
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+  final List<Map<String, dynamic>> bookmarks;
+  final Function(bool) toggleTheme;
+  final bool isDarkMode;
+
+  const ProfileScreen({
+    super.key,
+    required this.bookmarks,
+    required this.toggleTheme,
+    required this.isDarkMode,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () {},
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: ListView(
+        children: [
+          Card(
+            margin: const EdgeInsets.all(16),
+            child: SwitchListTile(
+              title: Text('Dark Mode', style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).primaryColor,
+              )),
+              value: isDarkMode,
+              onChanged: toggleTheme,
+            ),
           ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text('Your Bookmarks', style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).primaryColor,
+            )),
+          ),
+          if (bookmarks.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('No bookmarks yet', style: TextStyle(
+                color: Colors.grey,
+              )),
+            ),
+          ...bookmarks.map((item) => Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: ListTile(
+              title: Text(item['title'], style: TextStyle(
+                fontWeight: FontWeight.bold,
+              )),
+              subtitle: Text(item['subject'] ?? item['company'], style: TextStyle(
+                color: Colors.grey[600],
+              )),
+            ),
+          )),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Profile Header
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      child: const Icon(Icons.person, size: 50, color: Colors.white),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'John Doe',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Computer Science • Final Year',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'john.doe@college.edu',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Stats Cards
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(context, 'Notes Shared', '12', Icons.note),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildStatCard(context, 'Downloads', '456', Icons.download),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(context, 'Applications', '8', Icons.send),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildStatCard(context, 'Bookmarks', '34', Icons.bookmark),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Menu Items
-            Card(
-              child: Column(
-                children: [
-                  _buildMenuItem(context, 'My Notes', Icons.note, () {}),
-                  _buildMenuItem(context, 'My Applications', Icons.work, () {}),
-                  _buildMenuItem(context, 'Bookmarks', Icons.bookmark, () {}),
-                  _buildMenuItem(context, 'Settings', Icons.settings, () {}),
-                  _buildMenuItem(context, 'Help & Support', Icons.help, () {}),
-                  _buildMenuItem(context, 'About', Icons.info, () {}),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Logout Button
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.logout),
-                label: const Text('Logout'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  side: const BorderSide(color: Colors.red),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(BuildContext context, String title, String value, IconData icon) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, size: 32, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenuItem(BuildContext context, String title, IconData icon, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      trailing: const Icon(Icons.arrow_forward_ios),
-      onTap: onTap,
     );
   }
 }
